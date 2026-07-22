@@ -1,4 +1,4 @@
-RingCalc — B-200 Balancing Ring Calculator
+RingCalc™ — B-200 Balancing Ring Calculator
 
 Copyright (c) 2026 Kinetic Precision. All Rights Reserved.
 
@@ -9,5 +9,5 @@ this software may be copied, reproduced, distributed, modified, reverse-
 engineered, or used to create derivative works, in whole or in part, by any
 means, without the express prior written permission of Kinetic Precision.
 
-"Time To Balance," "TTB Method," and the TTB balancing technique are
-trademarks of Kinetic Precision.
+"RingCalc," "Time To Balance," "TTB Method," and the TTB balancing technique
+are trademarks of Kinetic Precision.
