@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  RingCalc — B-200 Balancing Ring Calculator
+  Kinetic Precision · TTB Method · mixed-screw first-pass solver
+  ----------------------------------------------------------------------------
+  Revision : 0.12
+  Generated: 2026-07-20 20:48 EDT
+  ----------------------------------------------------------------------------
+  Geometry : 15 weight holes @ R0.950" (Balancing Ring Rev 3), 22.5deg pitch
+             arbor rolling radius a = 0.25" (1/2" shaft)
+  Physics  : U = 4*pi^2 * I_eff / (g * T^2)   [g.in]
+             I_eff = 0.5*Mdisk*R^2 + 0.5*ma*a^2 + (Mdisk+ma)*a^2
+  Rev 0.12 : Ring hole labels enlarged 150% (10px -> 15px). First successful
+             shop test: real wheel balanced in one pass (17s -> 30s), direction
+             logic and first-pass magnitude confirmed correct against ground truth.
+  Rev 0.11 : Fixed toggled-off installed-screw inconsistency in fine tuning
+             (installed screws now always counted; off types keep/remove only,
+             never added to new holes). Removed dead awaitingConfirm var.
+             Added this header block.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RingCalc — B-200 Balancing Ring Calculator</title>
+<style>
+  :root{
+    --steel-0:#0e1114; --steel-1:#171b20; --steel-2:#20262d; --steel-3:#2c353e;
+    --ink:#e8ebee; --ink-dim:#9aa4ad; --ink-faint:#5f6b74;
+    --amber:#f0a830; --amber-dim:#8a6a2a;
+    /* Colorblind-safe (Okabe-Ito). NO red/green signaling anywhere. */
+    --heavy:#0072B2;         /* heavy marker = strong blue (was red) */
+    --place:#E69F00;         /* generic "to place" = orange (was green) */
+    --font-disp:"Barlow Condensed","Arial Narrow",sans-serif;
+    --font-body:"Inter",-apple-system,"Segoe UI",Roboto,sans-serif;
+    --font-mono:"JetBrains Mono","SFMono-Regular",Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--steel-0);color:var(--ink);font-family:var(--font-body);font-size:19px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px;margin:0 auto;padding:22px 18px 56px}
+  .head{border-bottom:1px solid var(--steel-3);padding-bottom:12px;margin-bottom:18px}
+  .title{font-family:var(--font-disp);font-weight:600;letter-spacing:.02em;font-size:38px;line-height:1;text-transform:uppercase}
+  .title .thin{color:var(--amber);font-weight:500}
+  .subrow{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .sub{color:var(--ink-dim);font-size:15px;letter-spacing:.06em;text-transform:uppercase}
+  .revtag{color:var(--amber);font-family:var(--font-mono);font-size:14px;letter-spacing:.04em;white-space:nowrap}
+
+  /* two columns with a vertical divider between them */
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) 1px 380px;gap:24px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}.divider{display:none}}
+  .divider{background:var(--steel-3);width:1px}
+  .colhead{font-family:var(--font-disp);text-transform:uppercase;letter-spacing:.14em;font-size:16px;color:var(--ink-faint);font-weight:600;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--steel-2)}
+
+  .panel{background:var(--steel-1);border:1px solid var(--steel-3);border-radius:8px;padding:16px 16px 18px}
+  .panel + .panel{margin-top:16px}
+  .lbl{font-family:var(--font-disp);text-transform:uppercase;letter-spacing:.08em;font-size:14px;color:var(--amber);font-weight:600;margin-bottom:12px}
+
+  label.f{display:block;font-size:14px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:5px}
+  input[type=number],select{width:100%;background:var(--steel-0);border:1px solid var(--steel-3);color:var(--ink);border-radius:5px;padding:9px 10px;font-family:var(--font-mono);font-size:14px}
+  input:focus,select:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 2px rgba(240,168,48,.15)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .field{margin-bottom:14px}
+  .hint{font-size:14px;color:var(--ink-faint);margin-top:5px;line-height:1.45}
+  .unit{font-size:14px;color:var(--ink-faint);text-transform:none;letter-spacing:0}
+
+  button.go{width:100%;font-family:var(--font-disp);text-transform:uppercase;letter-spacing:.06em;cursor:pointer;border:none;border-radius:6px;font-size:16px;font-weight:600;padding:13px;background:var(--amber);color:#1a1206;transition:.12s}
+  button.go:hover{background:#ffbb45}
+  button.reset{width:100%;margin-top:10px;font-family:var(--font-disp);text-transform:uppercase;letter-spacing:.05em;cursor:pointer;background:transparent;color:var(--ink-dim);border:1px solid var(--steel-3);border-radius:6px;font-size:16px;padding:10px;transition:.12s}
+  button.reset:hover{border-color:var(--amber-dim);color:var(--ink)}
+  button.finetune{width:100%;margin-top:10px;font-family:var(--font-disp);text-transform:uppercase;letter-spacing:.05em;cursor:pointer;background:transparent;color:var(--place);border:1px solid var(--place);border-radius:6px;font-size:15px;font-weight:600;padding:12px;transition:.12s}
+  button.finetune:hover{background:rgba(230,159,0,.12)}
+  button.finetune:disabled{opacity:.35;cursor:not-allowed;border-color:var(--steel-3);color:var(--ink-faint)}
+  button.confirm{width:100%;margin-top:10px;font-family:var(--font-disp);text-transform:uppercase;letter-spacing:.05em;cursor:pointer;background:var(--place);color:#1a1206;border:none;border-radius:6px;font-size:15px;font-weight:600;padding:12px}
+  /* mode toggle: Fewest Screws <-> Best Balance */
+  .modebar{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 12px;background:var(--steel-0);border:1px solid var(--steel-3);border-radius:6px}
+  .modebar .mlabel{font-family:var(--font-disp);text-transform:uppercase;letter-spacing:.05em;font-size:13px;color:var(--ink-dim);flex:1}
+  .modebar .mlabel.act{color:var(--amber)}
+  .mtoggle{position:relative;width:46px;height:24px;border-radius:12px;background:var(--steel-3);cursor:pointer;flex:none;transition:.15s}
+  .mtoggle .mknob{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--amber);transition:.15s}
+  .mtoggle.best .mknob{left:24px}
+  /* delta budget field (active only in Fewest mode) */
+  .deltabar{display:flex;align-items:center;gap:9px;margin:-6px 0 14px;padding:9px 12px;background:var(--steel-0);border:1px solid var(--steel-3);border-radius:6px;transition:.15s}
+  .deltabar.dim{opacity:.4;pointer-events:none}
+  .deltabar .dlabel{font-family:var(--font-disp);text-transform:uppercase;letter-spacing:.05em;font-size:13px;color:var(--amber);font-weight:600;flex:none}
+  .deltabar input{width:70px;background:var(--steel-1);border:1px solid var(--steel-3);color:var(--ink);border-radius:5px;padding:6px 8px;font-family:var(--font-mono);font-size:14px;flex:none}
+  .deltabar input:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 2px rgba(240,168,48,.15)}
+  .deltabar .dunit{font-family:var(--font-mono);font-size:12px;color:var(--ink-dim);flex:none}
+  .deltabar .dhint{font-size:11px;color:var(--ink-faint);line-height:1.3;flex:1}
+
+  .dia{display:flex;justify-content:center;margin:2px 0 6px}
+  svg{width:100%;max-width:320px;height:auto}
+  .hole-txt{font-family:var(--font-mono);font-size:15px;text-anchor:middle;dominant-baseline:central}
+
+  .empty{color:var(--ink-faint);font-size:16px;text-align:center;padding:26px 8px;line-height:1.6}
+  .verdict{font-family:var(--font-disp);text-transform:uppercase;letter-spacing:.02em;font-size:22px;font-weight:600;padding:14px 16px;border-radius:7px;margin-bottom:14px;line-height:1.12}
+  .verdict.pass{background:rgba(0,158,115,.12);border:1px solid rgba(0,158,115,.45);color:#3ad0a0}
+  .verdict.go{background:rgba(240,168,48,.1);border:1px solid rgba(240,168,48,.35);color:var(--amber)}
+  .verdict.warn{background:rgba(0,114,178,.1);border:1px solid rgba(0,114,178,.5);color:#4aa8de}
+  .verdict small{display:block;font-family:var(--font-body);text-transform:none;letter-spacing:0;font-size:15.5px;color:var(--ink-dim);margin-top:5px;font-weight:400}
+
+  .moves{list-style:none;margin-bottom:6px}
+  .move{display:flex;align-items:center;gap:11px;background:var(--steel-0);border:1px solid var(--steel-3);border-radius:7px;padding:10px 12px;margin-bottom:7px}
+  .move .swatch{width:16px;height:16px;border-radius:4px;flex:none;border:1px solid rgba(255,255,255,.2)}
+  .move .holeid{font-family:var(--font-mono);font-size:22px;font-weight:600;min-width:22px;text-align:center;color:var(--ink)}
+  .move .desc{font-size:16px;color:var(--ink-dim)}
+  .move .desc b{color:var(--ink)}
+  .act-tag{font-family:var(--font-disp);text-transform:uppercase;letter-spacing:.05em;font-size:12px;font-weight:600;padding:3px 8px;border-radius:4px;flex:none}
+  .act-tag.add{background:rgba(230,159,0,.18);color:var(--place)}
+  .act-tag.rem{background:rgba(0,114,178,.18);color:#4aa8de}
+
+  .stat-r{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+  .stat{background:var(--steel-0);border:1px solid var(--steel-3);border-radius:6px;padding:9px 11px}
+  .stat .k{font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint)}
+  .stat .v{font-family:var(--font-mono);font-size:16px;margin-top:2px}
+  .stat .v .u{font-size:13px;color:var(--ink-dim)}
+  .reread{background:rgba(240,168,48,.08);border:1px solid var(--amber-dim);border-radius:6px;padding:11px 13px;font-size:15.5px;color:var(--ink-dim);margin-top:13px;line-height:1.5}
+  .reread b{color:var(--amber)}
+
+  /* screw library + legend */
+  .legend{display:flex;flex-direction:column;gap:6px;margin-top:2px}
+  .leg-row{display:grid;grid-template-columns:auto 1fr auto auto auto;gap:9px;align-items:center;font-family:var(--font-mono);font-size:15.5px;padding:5px 7px;border-radius:5px;border:1px solid var(--steel-3);background:var(--steel-0)}
+  .leg-row.sel{border-color:var(--amber)}
+  .leg-row .sw{width:15px;height:15px;border-radius:4px;border:1px solid rgba(255,255,255,.2)}
+  .leg-row .nm{color:var(--ink);cursor:pointer}
+  .leg-row .g{color:var(--amber)}
+  /* availability slide switch */
+  .toggle{position:relative;width:34px;height:19px;border-radius:10px;background:var(--steel-3);cursor:pointer;transition:.15s;flex:none;border:1px solid var(--steel-3)}
+  .toggle.on{background:var(--amber-dim)}
+  .toggle .knob{position:absolute;top:1.5px;left:1.5px;width:14px;height:14px;border-radius:50%;background:var(--ink-dim);transition:.15s}
+  .toggle.on .knob{left:16px;background:var(--amber)}
+  .mini{font-family:var(--font-disp);text-transform:uppercase;letter-spacing:.05em;font-size:14px;padding:4px 9px;border:1px solid var(--steel-3);background:transparent;color:var(--ink-dim);border-radius:4px;cursor:pointer}
+  .mini:hover{border-color:var(--amber-dim);color:var(--ink)}
+  details{margin-top:14px}
+  summary{cursor:pointer;font-family:var(--font-disp);text-transform:uppercase;letter-spacing:.06em;font-size:15px;color:var(--ink-faint);list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"▸ ";color:var(--amber)}
+  details[open] summary::before{content:"▾ "}
+  .selnote{font-size:14px;color:var(--ink-faint);margin-top:8px;line-height:1.4}
+
+  .foot{margin-top:22px;text-align:center;color:var(--ink-faint);font-size:14px;letter-spacing:.03em;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="title">Ring<span class="thin">Calc</span></div>
+    <div class="subrow">
+      <div class="sub">B-200 Balancing Ring · TTB Method · mixed-screw first-pass solver</div>
+      <div class="revtag">RingCalc rev 0.12</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- INPUTS -->
+    <div>
+      <div class="colhead">Inputs</div>
+      <div class="panel">
+        <div class="lbl">First: Wheel information</div>
+        <div class="row">
+          <div class="field">
+            <label class="f">Wheel diameter <span class="unit">(in)</span></label>
+            <input type="number" id="dia" step="0.25" min="0" placeholder="8">
+          </div>
+          <div class="field">
+            <label class="f">Wheel mass <span class="unit">(g)</span></label>
+            <input type="number" id="wmass" step="1" min="0" placeholder="weigh it">
+          </div>
+        </div>
+        <div class="field">
+          <label class="f">Arbor + adapter + ring mass <span class="unit">(g)</span></label>
+          <input type="number" id="amass" step="1" min="0" placeholder="the non-wheel rotating mass">
+          <div class="hint">Everything that spins that isn't the wheel: BS-8 arbor, Sopko adapter, balancing ring, screws. Weigh once, reuse.</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="lbl">Second: Use TTB Method and report</div>
+        <div class="field">
+          <label class="f">Reversal holes — one each side of the swing</label>
+          <div class="row"><select id="revA"></select><select id="revB"></select></div>
+          <div class="hint">The two holes crossing the horizon at the reversals. These fix the balance axis precisely.</div>
+        </div>
+        <div class="field">
+          <label class="f">Light-side hole — nearest the light mark at rest</label>
+          <select id="lightHole"></select>
+          <div class="hint">At rest the light side sits up near the setscrew and logo. Pick the hole nearest it. This just tells the tool which end of the axis is light — a rough read is fine.</div>
+        </div>
+        <div class="field">
+          <label class="f">TTB period T <span class="unit">(seconds)</span></label>
+          <input type="number" id="period" step="0.1" min="0" placeholder="e.g. 11.0">
+          <div class="hint">Pass target: period &gt; 25 s.</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="lbl">Third: Calculate screw locations</div>
+        <div class="modebar">
+          <span class="mlabel act" id="mlblFew">Fewest screws</span>
+          <span class="mtoggle" id="modeToggle" onclick="toggleMode()"><span class="mknob"></span></span>
+          <span class="mlabel" id="mlblBest" style="text-align:right">Best balance</span>
+        </div>
+        <div class="deltabar" id="deltabar">
+          <label class="dlabel" for="deltaInput">Delta budget</label>
+          <input type="number" id="deltaInput" step="0.05" min="0" value="0.90">
+          <span class="dunit">g·in</span>
+          <span class="dhint">fewest screws that stay within this of best balance</span>
+        </div>
+        <button class="go" onclick="solve()">Calculate screw locations</button>
+        <button class="finetune" id="ftBtn" onclick="startFineTune()" disabled>Keep screws and calculate fine tuning</button>
+        <button class="reset" onclick="uninstallScrews()">Uninstall screws — same wheel</button>
+        <button class="reset" onclick="resetAll()">Reset — start over</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- RESULTS -->
+    <div>
+      <div class="colhead">Results</div>
+      <div class="panel">
+        <div class="lbl">Ring map</div>
+        <div class="dia" id="svgHost"></div>
+        <div class="hint" style="text-align:center">Setscrew &amp; logo at top (light side). Hole 0 opposite, at bottom. Filled holes are colored by screw type.</div>
+      </div>
+      <div class="panel">
+        <div class="lbl">Prescription</div>
+        <div id="result"><div class="empty">Fill in the wheel, the reversal holes, the light-side hole, and the period — then calculate.</div></div>
+      </div>
+      <div class="panel">
+        <div class="lbl">Screw library</div>
+        <div id="legend" class="legend"></div>
+        <div class="selnote">The optimizer mixes any screws in the library. Click a name to see it highlighted. Colors are chosen to be distinguishable with red-green color vision.</div>
+        <details>
+          <summary>Add / remove screws</summary>
+          <div style="display:grid;grid-template-columns:1fr 64px auto;gap:6px;margin-top:10px">
+            <input id="nn" placeholder="name" style="font-family:var(--font-body);font-size:15px;padding:6px 8px;background:var(--steel-0);border:1px solid var(--steel-3);color:var(--ink);border-radius:4px">
+            <input id="ng" type="number" step="0.01" placeholder="g" style="font-size:15px;padding:6px 8px;background:var(--steel-0);border:1px solid var(--steel-3);color:var(--ink);border-radius:4px;font-family:var(--font-mono)">
+            <button class="mini" onclick="addScrew()">Add</button>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    KINETIC PRECISION · 15 holes @ R0.950″ · arbor a = 0.25″ · U = 4π²·I<sub>eff</sub> / (g·T²)<br>
+    "Time To Balance" &amp; "TTB Method" are trademarks of Kinetic Precision
+  </div>
+</div>
+
+<script>
+/* ===== GEOMETRY (Rev 3) ===== */
+const R_ARM=0.950, A_ARBOR=0.25, G=386.0886, TTB_PASS=25;
+const HOLES=[
+  {id:'7',ang:22.5},{id:'6',ang:45},{id:'5',ang:67.5},{id:'4',ang:90},
+  {id:'3',ang:112.5},{id:'2',ang:135},{id:'1',ang:157.5},{id:'0',ang:180},
+  {id:'A',ang:202.5},{id:'B',ang:225},{id:'C',ang:247.5},{id:'D',ang:270},
+  {id:'E',ang:292.5},{id:'F',ang:315},{id:'G',ang:337.5}
+];
+const ANG=Object.fromEntries(HOLES.map(h=>[h.id,h.ang]));
+const N=HOLES.length;
+const UNIT=HOLES.map(h=>{const a=ANG[h.id]*Math.PI/180;return[Math.sin(a),Math.cos(a)];});
+const HIDX_MAP=Object.fromEntries(HOLES.map((h,i)=>[h.id,i]));
+
+/* Colorblind-safe palette (Okabe-Ito), assigned in order to library screws.
+   Ordered to keep adjacent picks distinct for red-green CVD. */
+const SCREW_COLORS=['#0072B2','#E69F00','#56B4E9','#D55E00','#F0E442','#CC79A7','#009E73','#999999'];
+
+/* Screw library — seeded with three for testing mixed solving.
+   'on' = available for the solution (toggleable). */
+let LIB=[
+  {name:'TestScrew 1', g:1.50, on:true, seed:true},
+  {name:'Heavy 3.0g',  g:3.00, on:true},
+  {name:'Light 0.8g',  g:0.80, on:true}
+];
+let libSel=0;
+/* mode: false = fewest screws (larger allowed miss), true = best balance (accuracy dominates) */
+let bestBalanceMode=false;
+/* differential state: screws confirmed installed in the ring, as [{hole, screw(LIBidx)}] */
+let installed=[];
+/* the last prescription awaiting confirmation, and the last solve's context */
+let pendingPrescription=null;   // {placements, heavyHole, heavyAng}
+function screwColor(i){return SCREW_COLORS[i % SCREW_COLORS.length];}
+
+/* ===== physics ===== */
+function residualGramIn(diaIn,wMassG,aMassG,T){
+  const R=diaIn/2, Mdisk=wMassG, ma=aMassG, M=Mdisk+ma;
+  const Iaxis=0.5*Mdisk*R*R + 0.5*ma*A_ARBOR*A_ARBOR;
+  const Ieff=Iaxis + M*A_ARBOR*A_ARBOR;
+  return 4*Math.PI*Math.PI*Ieff/(G*T*T);   // g·in
+}
+function vec(id){const a=ANG[id]*Math.PI/180;return[Math.sin(a),Math.cos(a)];}
+function heavyDirection(a,b,lightId){
+  const va=vec(a),vb=vec(b);let mx=(va[0]+vb[0])/2,my=(va[1]+vb[1])/2;const mag=Math.hypot(mx,my);
+  if(mag<1e-6) return (ANG[lightId]+180)%360;
+  let axisDeg=Math.atan2(mx,my)*180/Math.PI;if(axisDeg<0)axisDeg+=360;
+  const cand=[axisDeg,(axisDeg+180)%360];
+  const la=ANG[lightId]*Math.PI/180,lx=Math.sin(la),ly=Math.cos(la);
+  let best=cand[0],bestDot=Infinity;
+  cand.forEach(c=>{const cr=c*Math.PI/180,dot=Math.sin(cr)*lx+Math.cos(cr)*ly;if(dot<bestDot){bestDot=dot;best=c;}});
+  return best;
+}
+function nearestHole(a){let best=HOLES[0],bd=999;HOLES.forEach(h=>{let d=Math.abs(((h.ang-a+540)%360)-180);if(d<bd){bd=d;best=h;}});return best.id;}
+
+/* ===== mixed-screw solver: deterministic restart local + vernier-pair search =====
+   Objective: minimize the resultant's miss from the target (accuracy dominates);
+   screw count only breaks ties within EPS_TIE. The pair-search move lets the solver
+   discover symmetric (vernier) pairs that synthesize corrections finer than one screw. */
+/* Internal search ALWAYS uses a tight tie band so it converges cleanly.
+   The Fewest-Screws mode is applied afterward as a simplification pass. */
+const EPS_TIE=0.02;
+function fewestSlack(){
+  if(bestBalanceMode) return 0.02;             // Best: accuracy dominates, no budget
+  const el=document.getElementById('deltaInput');
+  const v=el?parseFloat(el.value):0.9;
+  return (v>0)?v:0.9;                          // Fewest: user-set Delta budget (g·in)
+}
+function mulberry32(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function moment(assign,moms){let x=0,y=0,cnt=0;for(let i=0;i<N;i++){const s=assign[i];if(s>=0){x+=UNIT[i][0]*moms[s];y+=UNIT[i][1]*moms[s];cnt++;}}return[x,y,cnt];}
+function distOf(assign,target,moms){const[x,y]=moment(assign,moms);return Math.hypot(x-target[0],y-target[1]);}
+function scoreOf(assign,target,moms){const d=distOf(assign,target,moms);const cnt=assign.reduce((a,v)=>a+(v>=0?1:0),0);return {d,cnt};}
+function better(A,B){
+  if(A.d<B.d-EPS_TIE) return true;
+  if(A.d>B.d+EPS_TIE) return false;
+  if(A.cnt!==B.cnt) return A.cnt<B.cnt;
+  return A.d<B.d-1e-9;
+}
+function localSearch(assign,target,moms,K){
+  let cur=scoreOf(assign,target,moms),improved=true,lg=0;
+  while(improved && lg++<300){improved=false;let bm=null,bs=cur;
+    for(let h=0;h<N;h++){const orig=assign[h];
+      for(let s=-1;s<K;s++){if(s===orig)continue;assign[h]=s;const sc=scoreOf(assign,target,moms);if(better(sc,bs)){bs=sc;bm={h,s};}assign[h]=orig;}}
+    if(bm){assign[bm.h]=bm.s;cur=bs;improved=true;}}
+  return cur;
+}
+function pairSearch(assign,target,moms,K,corrDeg){
+  // try placing the same screw at a hole AND its mirror across the correction axis
+  let cur=scoreOf(assign,target,moms),improved=true,pg=0;
+  while(improved && pg++<200){improved=false;let bm=null,bs=cur;
+    for(let i=0;i<N;i++){
+      const mirrorDeg=((2*corrDeg-ANG[HOLES[i].id])%360+360)%360;
+      let mj=-1,md=1e9;for(let k=0;k<N;k++){let dd=Math.abs(((ANG[HOLES[k].id]-mirrorDeg+540)%360)-180);if(dd<md){md=dd;mj=k;}}
+      if(mj===i) continue;
+      for(let s=0;s<K;s++){const oi=assign[i],oj=assign[mj];assign[i]=s;assign[mj]=s;const sc=scoreOf(assign,target,moms);if(better(sc,bs)){bs=sc;bm={i,mj,s};}assign[i]=oi;assign[mj]=oj;}
+    }
+    if(bm){assign[bm.i]=bm.s;assign[bm.mj]=bm.s;cur=bs;improved=true;}}
+  return cur;
+}
+function solveMixed(target, corrDeg){
+  // only screws toggled on participate; keep original LIB index for color mapping
+  const active=[]; LIB.forEach((s,idx)=>{ if(s.on) active.push({idx,g:s.g}); });
+  if(!active.length) return {none:true};
+  const K=active.length, moms=active.map(s=>s.g*R_ARM);
+  const rnd=mulberry32(777);                 // fixed seed -> deterministic, reproducible
+  let bestA=new Array(N).fill(-1), bestS=scoreOf(bestA,target,moms);
+  const consider=a=>{localSearch(a,target,moms,K);pairSearch(a,target,moms,K,corrDeg);localSearch(a,target,moms,K);const s=scoreOf(a,target,moms);if(better(s,bestS)){bestS=s;bestA=a.slice();}};
+  consider(new Array(N).fill(-1));
+  for(let r=0;r<2500;r++){const a=new Array(N);const dens=rnd()*0.6;for(let i=0;i<N;i++)a[i]=rnd()<dens?Math.floor(rnd()*K):-1;consider(a);}
+  // final tie-break removal: drop any screw that doesn't worsen the miss
+  let changed=true,rg=0;while(changed && rg++<60){changed=false;for(let h=0;h<N;h++){if(bestA[h]<0)continue;const o=bestA[h];bestA[h]=-1;const s=scoreOf(bestA,target,moms);if(better(s,bestS)||Math.abs(s.d-bestS.d)<1e-9){bestS=s;changed=true;}else bestA[h]=o;}}
+  // FEWEST-SCREWS mode: greedily remove more screws as long as the miss stays
+  // within fewestSlack() of the accurate best. (No effect in best-balance mode.)
+  const slack=fewestSlack();
+  if(slack>EPS_TIE){
+    const refMiss=distOf(bestA,target,moms);
+    let more=true,guard=0;
+    while(more && guard++<60){
+      more=false;
+      let bestRem=-1,bestRemMiss=Infinity;
+      for(let h=0;h<N;h++){if(bestA[h]<0)continue;const o=bestA[h];bestA[h]=-1;const dm=distOf(bestA,target,moms);bestA[h]=o;
+        if(dm<=refMiss+slack && dm<bestRemMiss){bestRemMiss=dm;bestRem=h;}}
+      if(bestRem>=0){bestA[bestRem]=-1;more=true;}
+    }
+  }
+  const[x,y,cnt]=moment(bestA,moms);
+  const placements=[];for(let i=0;i<N;i++)if(bestA[i]>=0)placements.push({hole:HOLES[i].id,screw:active[bestA[i]].idx});
+  return {placements,resultant:[x,y],dist:distOf(bestA,target,moms),cnt,none:false};
+}
+
+/* ===== UI ===== */
+function fillSelects(){
+  const opts=HOLES.map(h=>`<option value="${h.id}">${h.id}</option>`).join('');
+  revA.innerHTML='<option value="">side A…</option>'+opts;
+  revB.innerHTML='<option value="">side B…</option>'+opts;
+  lightHole.innerHTML='<option value="">light hole…</option>'+opts;
+}
+function drawRing(hi){
+  hi=hi||{};const S=260,PAD=40,VB=S+PAD*2,c=S/2+PAD,rH=S*0.375,rD=S*0.058;
+  const rOuter=S*0.47, rInner=S*0.235;
+  const fillColors=hi.fillColors||{};   // holeId -> color
+  let o=`<svg viewBox="0 0 ${VB} ${VB}" role="img" aria-label="ring map">`;
+  o+=`<circle cx="${c}" cy="${c}" r="${rOuter}" fill="none" stroke="var(--steel-3)"/>`;
+  o+=`<circle cx="${c}" cy="${c}" r="${rInner}" fill="none" stroke="var(--steel-3)"/>`;
+
+  // --- setscrew hole: two short vertical dotted lines at top (12 o'clock) ---
+  const ssGap=3.2, ssTop=c-rH-rD*0.9, ssBot=c-rH+rD*0.9;
+  o+=`<line x1="${(c-ssGap).toFixed(1)}" y1="${ssTop.toFixed(1)}" x2="${(c-ssGap).toFixed(1)}" y2="${ssBot.toFixed(1)}" stroke="var(--ink-dim)" stroke-width="1.3" stroke-dasharray="2.5 2"/>`;
+  o+=`<line x1="${(c+ssGap).toFixed(1)}" y1="${ssTop.toFixed(1)}" x2="${(c+ssGap).toFixed(1)}" y2="${ssBot.toFixed(1)}" stroke="var(--ink-dim)" stroke-width="1.3" stroke-dasharray="2.5 2"/>`;
+
+  // --- two mounting bumps on the inner bore, 120° from setscrew (4 & 8 o'clock) ---
+  [120,240].forEach(deg=>{
+    const a=(deg-90)*Math.PI/180;   // 0deg=top; 120 -> lower-right, 240 -> lower-left
+    const bx=c+rInner*Math.cos(a), by=c+rInner*Math.sin(a);
+    // small inward bump: an arc/nub protruding toward center
+    o+=`<circle cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" r="4.2" fill="var(--steel-2)" stroke="var(--steel-3)" stroke-width="1"/>`;
+  });
+
+  // --- light-heavy axis line (only after a solve, when heavy direction known) ---
+  if(hi.heavyAng!=null){
+    const ha=(hi.heavyAng-90)*Math.PI/180;             // heavy end (svg angle)
+    const ext=rOuter+22;                                // extend past circle
+    const hx=c+ext*Math.cos(ha), hy=c+ext*Math.sin(ha);
+    const lx=c-ext*Math.cos(ha), ly=c-ext*Math.sin(ha);// light end = opposite
+    o+=`<line x1="${lx.toFixed(1)}" y1="${ly.toFixed(1)}" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" stroke="var(--ink-faint)" stroke-width="1.2" stroke-dasharray="4 3"/>`;
+    // labels at the two poles
+    const lblR=rOuter+34;
+    const Hlx=c+lblR*Math.cos(ha), Hly=c+lblR*Math.sin(ha);
+    const Llx=c-lblR*Math.cos(ha), Lly=c-lblR*Math.sin(ha);
+    o+=`<text x="${Hlx.toFixed(1)}" y="${Hly.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-family="var(--font-disp)" font-size="13" font-weight="700" letter-spacing="1" fill="var(--heavy)">HEAVY</text>`;
+    o+=`<text x="${Llx.toFixed(1)}" y="${Lly.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-family="var(--font-disp)" font-size="13" font-weight="700" letter-spacing="1" fill="var(--ink-dim)">LIGHT</text>`;
+  }
+
+  HOLES.forEach((h,i)=>{
+    const a=(h.ang-90)*Math.PI/180,x=c+rH*Math.cos(a),y=c+rH*Math.sin(a);
+    const col=fillColors[h.id], isHeavy=(hi.heavy===h.id);
+    let fill=col||'var(--steel-2)';
+    let stroke=col?col:'var(--steel-3)';
+    let sw=1, tcol=col?'#0d0d0d':'var(--ink-dim)';
+    if(isHeavy){stroke='var(--heavy)';sw=2.5;}
+    o+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${rD}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>`;
+    o+=`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" class="hole-txt" style="fill:${tcol};${col?'font-weight:700':''}">${h.id}</text>`;
+    // slash across holes whose screws are confirmed installed / kept in place
+    if(hi.slashHoles && hi.slashHoles.includes(h.id)){
+      const dx=rD*0.72, dy=rD*0.72;
+      o+=`<line x1="${(x-dx).toFixed(1)}" y1="${(y+dy).toFixed(1)}" x2="${(x+dx).toFixed(1)}" y2="${(y-dy).toFixed(1)}" stroke="#0d0d0d" stroke-width="2.2"/>`;
+    }
+  });
+  o+=`</svg>`;svgHost.innerHTML=o;
+}
+function renderLegend(){
+  legend.innerHTML=LIB.map((s,i)=>
+    `<div class="leg-row ${i===libSel?'sel':''}">`+
+    `<span class="sw" style="background:${screwColor(i)}"></span>`+
+    `<span class="nm" onclick="libSel=${i};renderLegend()">${s.name}</span>`+
+    `<span class="g">${s.g.toFixed(2)} g</span>`+
+    `<span class="toggle ${s.on?'on':''}" role="switch" aria-checked="${s.on}" title="${s.on?'Available — click to mark out of stock':'Out of stock — click to make available'}" onclick="toggleScrew(${i})"><span class="knob"></span></span>`+
+    (s.seed?'<span style="color:var(--ink-faint);font-size:12.5px">seed</span>':
+      `<button class="mini" onclick="delScrew(${i})">×</button>`)+
+    `</div>`).join('');
+}
+function toggleScrew(i){LIB[i].on=!LIB[i].on;renderLegend();}
+function addScrew(){const n=nn.value.trim(),g=parseFloat(ng.value);if(!n||!(g>0))return;LIB.push({name:n,g,on:true});libSel=LIB.length-1;nn.value='';ng.value='';renderLegend();}
+function delScrew(i){LIB.splice(i,1);if(libSel>=LIB.length)libSel=0;renderLegend();}
+
+function toggleMode(){
+  bestBalanceMode=!bestBalanceMode;
+  document.getElementById('modeToggle').classList.toggle('best',bestBalanceMode);
+  document.getElementById('mlblFew').classList.toggle('act',!bestBalanceMode);
+  document.getElementById('mlblBest').classList.toggle('act',bestBalanceMode);
+  document.getElementById('deltabar').classList.toggle('dim',bestBalanceMode);
+}
+
+// read + validate the common inputs; returns null with a message on failure
+function readInputs(){
+  const D=parseFloat(document.getElementById('dia').value);
+  const wm=parseFloat(document.getElementById('wmass').value);
+  const am=parseFloat(document.getElementById('amass').value);
+  const a=revA.value,b=revB.value,light=lightHole.value,T=parseFloat(document.getElementById('period').value);
+  if(!(D>0)||!(wm>0)||!(am>0)){result.innerHTML=`<div class="empty">Enter wheel diameter, wheel mass, and arbor mass.</div>`;drawRing();return null;}
+  if(!a||!b||!(T>0)){result.innerHTML=`<div class="empty">Enter both reversal holes and a period &gt; 0.</div>`;drawRing();return null;}
+  if(!light){result.innerHTML=`<div class="empty">Pick the light-side hole so the tool knows which end of the axis is heavy.</div>`;drawRing();return null;}
+  if(!LIB.length){result.innerHTML=`<div class="empty">Add at least one screw to the library.</div>`;drawRing();return null;}
+  return {D,wm,am,a,b,light,T};
+}
+
+// moment vector of an installed set [{hole,screw}] using LIB masses
+function installedMoment(){
+  let x=0,y=0;
+  installed.forEach(p=>{const u=UNIT[HIDX_MAP[p.hole]];const g=LIB[p.screw].g;x+=u[0]*g*R_ARM;y+=u[1]*g*R_ARM;});
+  return [x,y];
+}
+
+/* FIRST PASS — solve from empty ring */
+function solve(){
+  const inp=readInputs(); if(!inp) return;
+  const {D,wm,am,a,b,light,T}=inp;
+  if(T>TTB_PASS){
+    result.innerHTML=`<div class="verdict pass">Balanced — done<small>Period ${T.toFixed(1)} s is past the 25 s threshold. Residual is below the stand's resolution.</small></div>`;
+    drawRing();return;
+  }
+  const U=residualGramIn(D,wm,am,T);
+  const heavyAng=heavyDirection(a,b,light);
+  const heavyHole=nearestHole(heavyAng);
+  const corrAng=(heavyAng+180)%360;
+  const cr=corrAng*Math.PI/180;
+  const target=[U*Math.sin(cr), U*Math.cos(cr)];
+  const sol=solveMixed(target, corrAng);
+  if(sol.none){
+    result.innerHTML=`<div class="verdict warn">No screws available<small>Every screw in the library is switched off. Turn at least one on (in the Screw library, right) so the solver has something to place.</small></div>`;
+    drawRing({heavy:heavyHole, heavyAng});return;
+  }
+  renderPrescription(sol, U, heavyHole, heavyAng, /*isFineTune=*/false, /*diff=*/null);
+}
+
+/* FINE TUNING — keep installed screws, solve for the incremental change */
+/* Fine-tune solver: start from the installed configuration and improve it,
+   but only DISTURB an installed screw (remove/swap) when doing so improves the
+   miss by more than CHANGE_THRESHOLD. Adding to empty holes is always allowed. */
+const CHANGE_THRESHOLD=0.2;   // g·in — min improvement to justify touching an installed screw
+function solveFineTuneAssign(target, installedAssign){
+  // Active pool = all toggled-ON screws (usable for new placements) PLUS any screw
+  // type that is physically installed even if now toggled OFF. A toggled-off type may
+  // be KEPT or REMOVED where installed, but never ADDED to a new hole.
+  const usable=new Set();                         // LIB indices allowed for NEW placements
+  LIB.forEach((s,idx)=>{ if(s.on) usable.add(idx); });
+  const installedTypes=new Set(installedAssign.map(p=>p.screw));
+  const poolIdx=[...new Set([...usable, ...installedTypes])].sort((a,b)=>a-b);
+  if(!poolIdx.length) return {none:true};
+  const active=poolIdx.map(idx=>({idx,g:LIB[idx].g,addable:usable.has(idx)}));
+  const moms=active.map(s=>s.g*R_ARM);
+  const addable=active.map(s=>s.addable);
+  const idxToActive={}; active.forEach((s,ai)=>idxToActive[s.idx]=ai);
+  const assign=new Array(N).fill(-1);
+  // place ALL installed screws (their type is guaranteed in the pool now)
+  installedAssign.forEach(p=>{ assign[HIDX_MAP[p.hole]]=idxToActive[p.screw]; });
+  const installedHoles=new Set(installedAssign.map(p=>HIDX_MAP[p.hole]));
+
+  let curMiss=distOf(assign,target,moms);
+  let improved=true, guard=0;
+  while(improved && guard++<300){
+    improved=false; let bestGain=0, bm=null;
+    for(let h=0;h<N;h++){
+      const orig=assign[h];
+      const disturbing = installedHoles.has(h) && orig>=0;
+      for(let s=-1;s<active.length;s++){
+        if(s===orig) continue;
+        // forbid placing a non-addable (toggled-off) type into a hole not already holding it
+        if(s>=0 && !addable[s] && s!==orig) continue;
+        assign[h]=s; const m=distOf(assign,target,moms); assign[h]=orig;
+        const gain=curMiss-m;
+        const bar = disturbing ? CHANGE_THRESHOLD : 1e-9;
+        if(gain>bar && gain>bestGain){bestGain=gain;bm={h,s};}
+      }
+    }
+    if(bm){assign[bm.h]=bm.s;curMiss=distOf(assign,target,moms);improved=true;}
+  }
+  const[x,y,cnt]=moment(assign,moms);
+  const placements=[];for(let i=0;i<N;i++)if(assign[i]>=0)placements.push({hole:HOLES[i].id,screw:active[assign[i]].idx});
+  return {placements,resultant:[x,y],dist:distOf(assign,target,moms),cnt,none:false};
+}
+
+function startFineTune(){
+  const inp=readInputs(); if(!inp) return;
+  const {D,wm,am,a,b,light,T}=inp;
+  if(T>TTB_PASS){
+    result.innerHTML=`<div class="verdict pass">Balanced — done<small>Period ${T.toFixed(1)} s is past the 25 s threshold. Nothing more to do.</small></div>`;
+    drawRing({slashHoles:installed.map(p=>p.hole)});return;
+  }
+  const U=residualGramIn(D,wm,am,T);           // remaining residual, WITH installed screws in place
+  const heavyAng=heavyDirection(a,b,light);
+  const heavyHole=nearestHole(heavyAng);
+  const corrAng=(heavyAng+180)%360;
+  const cr=corrAng*Math.PI/180;
+  const needed=[U*Math.sin(cr), U*Math.cos(cr)];        // extra moment we must add
+  const instMom=installedMoment();
+  const totalTarget=[instMom[0]+needed[0], instMom[1]+needed[1]];  // total moment the ring should carry
+  const sol=solveFineTuneAssign(totalTarget, installed);
+  if(sol.none){
+    result.innerHTML=`<div class="verdict warn">No screws available<small>Every screw in the library is switched off. Turn at least one on so the solver has something to place.</small></div>`;
+    drawRing({heavy:heavyHole, heavyAng, slashHoles:installed.map(p=>p.hole)});return;
+  }
+  const d=diffPlacements(installed, sol.placements);
+  renderPrescription(sol, U, heavyHole, heavyAng, /*isFineTune=*/true, d);
+}
+
+// diff installed vs target -> adds/removes/keeps (swap = remove+add on same hole)
+function diffPlacements(inst, total){
+  const im={}, tm={};
+  inst.forEach(p=>im[p.hole]=p.screw);
+  total.forEach(p=>tm[p.hole]=p.screw);
+  const adds=[],removes=[],keeps=[];
+  const holes=new Set([...Object.keys(im),...Object.keys(tm)]);
+  holes.forEach(h=>{
+    const i=im[h], t=tm[h];
+    if(i===undefined && t!==undefined) adds.push({hole:h,screw:t});
+    else if(i!==undefined && t===undefined) removes.push({hole:h,screw:i});
+    else if(i!==t){removes.push({hole:h,screw:i});adds.push({hole:h,screw:t});}
+    else keeps.push({hole:h,screw:i});
+  });
+  return {adds,removes,keeps};
+}
+
+/* shared renderer. On first pass diff=null (everything is an "add").
+   On fine-tune, diff has adds/removes/keeps for explicit instructions. */
+function renderPrescription(sol, U, heavyHole, heavyAng, isFineTune, diff){
+  const achMag=Math.hypot(sol.resultant[0],sol.resultant[1]);
+  const activeMoments=LIB.filter(s=>s.on).map(s=>s.g*R_ARM);
+  const smallestMoment=Math.min(...activeMoments);
+  const outOfAuthority = sol.dist > smallestMoment;
+
+  // ring coloring: final total set colored by screw; keeps get a slash
+  const fillColors={};
+  sol.placements.forEach(p=>{fillColors[p.hole]=screwColor(p.screw);});
+  const slashSet = isFineTune ? diff.keeps.map(k=>k.hole) : [];
+  drawRing({fillColors, heavy:heavyHole, heavyAng, slashHoles:slashSet});
+
+  // build the instruction list
+  let movesHtml='';
+  if(!isFineTune){
+    const byScrew={};
+    sol.placements.forEach(p=>{(byScrew[p.screw]=byScrew[p.screw]||[]).push(p.hole);});
+    Object.keys(byScrew).map(Number).sort((x,y)=>x-y).forEach(si=>{
+      const holes=byScrew[si];
+      movesHtml+=`<li class="move"><span class="swatch" style="background:${screwColor(si)}"></span>`+
+        `<span class="holeid">${holes.join(' · ')}</span>`+
+        `<span class="desc"><b>${LIB[si].name}</b> (${LIB[si].g.toFixed(2)} g) — ${holes.length} hole${holes.length>1?'s':''}</span></li>`;
+    });
+  }else{
+    diff.removes.forEach(r=>{
+      movesHtml+=`<li class="move"><span class="act-tag rem">Remove</span><span class="holeid">${r.hole}</span>`+
+        `<span class="desc">take out <b>${LIB[r.screw].name}</b></span></li>`;
+    });
+    diff.adds.forEach(ad=>{
+      movesHtml+=`<li class="move"><span class="act-tag add">Add</span><span class="swatch" style="background:${screwColor(ad.screw)}"></span><span class="holeid">${ad.hole}</span>`+
+        `<span class="desc">insert <b>${LIB[ad.screw].name}</b> (${LIB[ad.screw].g.toFixed(2)} g)</span></li>`;
+    });
+    if(!diff.adds.length && !diff.removes.length){
+      movesHtml=`<li class="move"><span class="desc" style="padding:4px 2px">No change needed — the installed screws are already the best set. Re-read to confirm the period.</span></li>`;
+    }
+  }
+
+  const heavyStat=`<div class="stat"><div class="k">Heavy dir</div><div class="v" style="color:var(--heavy)">~${heavyHole}</div></div>`;
+  const statsBlock=`<div class="stat-r">
+      <div class="stat"><div class="k">Residual U</div><div class="v" style="color:var(--amber)">${U.toFixed(2)}<span class="u"> g·in</span></div></div>
+      ${heavyStat}
+      <div class="stat"><div class="k">Correction</div><div class="v" style="color:var(--place)">${achMag.toFixed(2)}<span class="u"> g·in</span></div></div>
+      <div class="stat"><div class="k">Delta</div><div class="v">${sol.dist.toFixed(2)}<span class="u"> g·in</span></div></div>
+    </div>`;
+
+  let html;
+  if(outOfAuthority){
+    html=`<div class="verdict warn">Beyond the ring's reach`+
+      `<small>Residual is ${U.toFixed(1)} g·in; the best the ring can produce is ${achMag.toFixed(1)} g·in — short by ${sol.dist.toFixed(1)} g·in. Add a heavier screw, or the wheel is unusually far out.</small></div>`+
+      (movesHtml?`<ul class="moves">${movesHtml}</ul>`:'')+statsBlock;
+  }else{
+    const title = isFineTune ? `Fine tuning` : `Fill ${sol.cnt} hole${sol.cnt===1?'':'s'}`;
+    const sub = isFineTune
+      ? `Adjust the ring as below. Slashed holes on the map stay put. Then re-read.`
+      : `Colored by screw type. Opposite the heavy spot (~hole ${heavyHole}, marked H). Then confirm &amp; re-read.`;
+    html=`<div class="verdict go">${title}<small>${sub}</small></div>`+
+      (movesHtml?`<ul class="moves">${movesHtml}</ul>`:'')+statsBlock;
+  }
+
+  // stash for the confirm step, then offer confirm
+  pendingPrescription={placements:sol.placements, heavyHole, heavyAng};
+  html+=`<button class="confirm" onclick="confirmInstalled()">✓ I installed these — confirm</button>`;
+  html+=`<div class="reread">After confirming, run TTB again, enter the new reading, and press <b>Keep screws and calculate fine tuning</b>. Repeat until the period clears <b>25 s</b>.</div>`;
+  result.innerHTML=html;
+}
+
+/* user confirms the current prescription is now physically in the ring */
+function confirmInstalled(){
+  if(!pendingPrescription) return;
+  installed = pendingPrescription.placements.map(p=>({hole:p.hole,screw:p.screw}));
+  document.getElementById('ftBtn').disabled = installed.length===0;
+  // redraw map with confirmed screws slashed
+  drawRing({
+    fillColors:Object.fromEntries(installed.map(p=>[p.hole,screwColor(p.screw)])),
+    heavy:pendingPrescription.heavyHole, heavyAng:pendingPrescription.heavyAng,
+    slashHoles:installed.map(p=>p.hole)
+  });
+  result.innerHTML=`<div class="verdict pass">Screws confirmed installed<small>${installed.length} screw${installed.length===1?'':'s'} now in the ring (slashed on the map). Run TTB again, enter the new reading, then press “Keep screws and calculate fine tuning.”</small></div>`;
+}
+
+function uninstallScrews(){
+  // keep the wheel info block; clear screws, TTB reading, and results
+  ['period'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  revA.value='';revB.value='';lightHole.value='';
+  installed=[]; pendingPrescription=null;
+  document.getElementById('ftBtn').disabled=true;
+  result.innerHTML=`<div class="empty">Same wheel kept. Run TTB, enter the reversal holes, the light-side hole, and the period — then calculate.</div>`;
+  drawRing();
+}
+
+function resetAll(){
+  ['dia','wmass','amass','period'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  revA.value='';revB.value='';lightHole.value='';
+  installed=[]; pendingPrescription=null;
+  document.getElementById('ftBtn').disabled=true;
+  result.innerHTML=`<div class="empty">Fill in the wheel, the reversal holes, the light-side hole, and the period — then calculate.</div>`;
+  drawRing();
+}
+
+/* boot */
+fillSelects();drawRing();renderLegend();
+</script>
+</body>
+</html>
