@@ -16,14 +16,23 @@
   "RingCalc," "Time To Balance," "TTB Method," and the TTB balancing technique
   are trademarks of Kinetic Precision.
   ----------------------------------------------------------------------------
-  Revision : 0.29
-  Generated: 2026-07-22 17:43 EDT
+  Revision : 0.32
+  Generated: 2026-07-22 18:07 EDT
   ----------------------------------------------------------------------------
   Geometry : 15 weight holes @ R0.950" (Balancing Ring Rev 3), 22.5deg pitch
              arbor rolling radius a = 0.25" (1/2" shaft)
              M = mounting-setscrew position at top (0deg); reading-only, never a weight station
   Physics  : U = 4*pi^2 * I_eff / (g * T^2)   [g.in]
              I_eff = 0.5*Mdisk*R^2 + 0.5*ma*a^2 + (Mdisk+ma)*a^2
+  Rev 0.32 : FLIP CHECK step 2: added SHCS escalation paragraph (swap setscrew to
+             socket-head cap screw for more mounting weight as a last-ditch effort;
+             note untrued wheel may be the problem).
+  Rev 0.31 : FLIP CHECK text: step 1 adds a recommendation to true a freshly-mounted
+             wheel first (removes gross concentricity errors); step 2 adds "Remove the
+             screws you added for this test" before proceeding to balancing.
+  Rev 0.30 : FLIP CHECK step 1 text expanded to the full first-attempt procedure
+             (mount, mark light side, align ring to mark, re-settle, check flip).
+             Step 2 reframed as the escalation (add six heaviest screws if no flip).
   Rev 0.29 : Added FLIP CHECK — a full-screen in-tool explainer of the Flip Test.
              Two ring-map diagrams (empty light-side-up; six top holes E/F/G/5/6/7
              filled with the heaviest AVAILABLE screw). Success returns with a
@@ -301,7 +310,7 @@
     <div class="title">Ring<span class="thin">Calc</span><span class="tm">™</span></div>
     <div class="subrow">
       <div class="sub">B-200 Balancing Ring · TTB Method · mixed-screw first-pass solver</div>
-      <div class="revtag">RingCalc™ rev 0.29</div>
+      <div class="revtag">RingCalc™ rev 0.32</div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
       <button class="flipbtn" onclick="openFlip()">Flip Check</button>
@@ -423,14 +432,15 @@
     <div class="flipstep">
       <h3>1 · Wheel at rest — light side up</h3>
       <div class="flipdiagram" id="flipDia1"></div>
-      <p>Mount the wheel on the hub with the ring attached (mounting setscrew only, no weight screws). Let it settle on the stand. The light side floats to the top, under the mounting screw (M). Mark it.</p>
+      <p>Properly mount the wheel on the hub, if not already done. If you are mounting a wheel onto the hub just prior to this test, it is recommended that you true the wheel on your grinder first. This removes any gross concentricity errors from the manufacturing process. Insert the arbor, place on the balancing stand, and let it settle to find the light side at 12-o'clock. Mark the light side with a pencil mark on the side. Mount the B-200 Balancing Ring on the hub with the logo and the mounting screw aligned with the light-side mark. Replace the wheel onto the balancing stand. If it flips, you're successful. If not, continue.</p>
     </div>
 
     <div class="flipstep">
-      <h3>2 · Load the light side — watch for the flip</h3>
+      <h3>2 · Still no flip? Load the light side</h3>
       <div class="flipdiagram" id="flipDia2"></div>
-      <p>Fill the six holes nearest the top — <b>E, F, G, 5, 6, 7</b> — with your heaviest available screws<span id="flipHeavyNote"></span>, split around the mounting screw. This piles correction weight onto the light side.</p>
-      <p>If the wheel now <b style="color:var(--amber)">flips</b> — the light side swings down to become the new heavy side — the correction you can apply brackets the correction you need. You're within the ring's range. Proceed to balancing.</p>
+      <p>If the ring alone didn't flip it, fill the six holes nearest the top — <b>E, F, G, 5, 6, 7</b> — with your heaviest available screws<span id="flipHeavyNote"></span>, split around the mounting screw. This piles correction weight onto the light side.</p>
+      <p>If the wheel does NOT flip, change the ring mounting screws from a setscrew to a socket-head cap screw (SHCS). This adds more weight, and is a last-ditch effort to show that you are able to balance this wheel. If you have not trued the wheel yet, that may also be a problem.</p>
+      <p>If the wheel now <b style="color:var(--amber)">flips</b> — the light side swings down to become the new heavy side — the correction you can apply brackets the correction you need. You're within the ring's range. Remove the screws you added for this test. Proceed to balancing.</p>
     </div>
 
     <div class="flipq">Did the wheel flip?</div>
