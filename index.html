@@ -16,14 +16,17 @@
   "RingCalc," "Time To Balance," "TTB Method," and the TTB balancing technique
   are trademarks of Kinetic Precision.
   ----------------------------------------------------------------------------
-  Revision : 0.27
-  Generated: 2026-07-22 17:06 EDT
+  Revision : 0.28
+  Generated: 2026-07-22 17:19 EDT
   ----------------------------------------------------------------------------
   Geometry : 15 weight holes @ R0.950" (Balancing Ring Rev 3), 22.5deg pitch
              arbor rolling radius a = 0.25" (1/2" shaft)
              M = mounting-setscrew position at top (0deg); reading-only, never a weight station
   Physics  : U = 4*pi^2 * I_eff / (g * T^2)   [g.in]
              I_eff = 0.5*Mdisk*R^2 + 0.5*ma*a^2 + (Mdisk+ma)*a^2
+  Rev 0.28 : Fixed residual horizontal shift on very narrow phones (<=360px): the
+             screw-library delete button poked past the edge. Added a <=360px
+             breakpoint shrinking toggle/delete/gap and stat boxes so nothing overflows.
   Rev 0.27 : Fixed Screw Library rows overflowing the screen on mobile (needed
              horizontal scroll to reach toggles/delete). Name column now shrinks
              (minmax 0) and truncates; tighter gaps/fonts on phone so rows fit.
@@ -243,6 +246,18 @@
     .title{font-size:30px}
     .colhead{font-size:14px}
   }
+  /* very narrow phones (<=360px): shrink the fixed elements so rows never overflow */
+  @media(max-width:360px){
+    .leg-row{gap:5px;padding:8px 6px}
+    .leg-row .g{font-size:12px}
+    .toggle{width:38px;height:22px}
+    .toggle .knob{width:18px;height:18px}
+    .toggle.on .knob{left:17px}
+    .mini{min-width:30px;min-height:30px;padding:4px 7px}
+    .stat-r{gap:7px}
+    .stat{padding:8px 9px}
+    .stat .v{font-size:15px}
+  }
 </style>
 </head>
 <body>
@@ -251,7 +266,7 @@
     <div class="title">Ring<span class="thin">Calc</span><span class="tm">™</span></div>
     <div class="subrow">
       <div class="sub">B-200 Balancing Ring · TTB Method · mixed-screw first-pass solver</div>
-      <div class="revtag">RingCalc™ rev 0.27</div>
+      <div class="revtag">RingCalc™ rev 0.28</div>
     </div>
   </div>
 
