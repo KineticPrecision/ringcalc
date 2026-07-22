@@ -16,14 +16,17 @@
   "RingCalc," "Time To Balance," "TTB Method," and the TTB balancing technique
   are trademarks of Kinetic Precision.
   ----------------------------------------------------------------------------
-  Revision : 0.24
-  Generated: 2026-07-22 16:21 EDT
+  Revision : 0.25
+  Generated: 2026-07-22 16:35 EDT
   ----------------------------------------------------------------------------
   Geometry : 15 weight holes @ R0.950" (Balancing Ring Rev 3), 22.5deg pitch
              arbor rolling radius a = 0.25" (1/2" shaft)
              M = mounting-setscrew position at top (0deg); reading-only, never a weight station
   Physics  : U = 4*pi^2 * I_eff / (g * T^2)   [g.in]
              I_eff = 0.5*Mdisk*R^2 + 0.5*ma*a^2 + (Mdisk+ma)*a^2
+  Rev 0.25 : Fix Android Chrome dropdowns: iframe height-reporting is now suppressed
+             while a form control is focused (a reflow was dismissing the native
+             <select> picker mid-tap on Android). Debounced; re-syncs on blur/change.
   Rev 0.24 : Added trademark symbol (TM) to RingCalc throughout (hero title, tab
              title, rev tag, header). RingCalc added to the trademark declarations
              in the header license and UI footer. USPTO register confirmed clear.
@@ -223,7 +226,7 @@
     <div class="title">Ring<span class="thin">Calc</span><span class="tm">™</span></div>
     <div class="subrow">
       <div class="sub">B-200 Balancing Ring · TTB Method · mixed-screw first-pass solver</div>
-      <div class="revtag">RingCalc™ rev 0.24</div>
+      <div class="revtag">RingCalc™ rev 0.25</div>
     </div>
   </div>
 
@@ -831,19 +834,40 @@ document.getElementById('deltabar').classList.toggle('dim',bestBalanceMode);
 
 /* ===== iframe auto-resize: report content height to the parent page =====
    Lets an embedding page (e.g. Squarespace) size the iframe to fit exactly,
-   so there is no inner scrollbar and the whole page scrolls as one. */
+   so there is no inner scrollbar and the whole page scrolls as one.
+   IMPORTANT: while a form control (select/input) is focused, height reporting
+   is suppressed. On Android Chrome a native <select> picker is dismissed if the
+   iframe reflows mid-interaction, which made dropdowns appear broken. We pause
+   reporting during interaction and re-sync on blur. */
 (function(){
-  let last=0;
-  function reportHeight(){
+  let last=0, locked=false, pending=false, timer=null;
+  function measureAndPost(){
     const h=Math.ceil(document.documentElement.getBoundingClientRect().height);
     if(h && Math.abs(h-last)>2){
       last=h;
       try{ parent.postMessage({ringcalcHeight:h}, '*'); }catch(e){}
     }
   }
+  function reportHeight(){
+    if(locked){ pending=true; return; }        // don't resize while a control is open
+    clearTimeout(timer);
+    timer=setTimeout(measureAndPost, 60);        // debounce rapid fires
+  }
+  // Lock while any form control is focused (covers the native select picker)
+  function isControl(el){ return el && (el.tagName==='SELECT'||el.tagName==='INPUT'||el.tagName==='TEXTAREA'); }
+  document.addEventListener('focusin', function(e){ if(isControl(e.target)) locked=true; });
+  document.addEventListener('focusout', function(e){
+    if(isControl(e.target)){
+      locked=false;
+      // let the picker fully close, then re-sync height if anything changed
+      setTimeout(function(){ if(pending){ pending=false; } reportHeight(); }, 250);
+    }
+  });
+  // A change on a select also settles layout; re-sync shortly after (unlocked by then)
+  document.addEventListener('change', function(e){ if(isControl(e.target)) setTimeout(reportHeight, 250); });
+
   window.addEventListener('load', reportHeight);
   window.addEventListener('resize', reportHeight);
-  // re-measure whenever the DOM changes height (solve, confirm, legend edits, etc.)
   if(window.ResizeObserver){
     new ResizeObserver(reportHeight).observe(document.documentElement);
   }else{
