@@ -16,14 +16,20 @@
   "RingCalc," "Time To Balance," "TTB Method," and the TTB balancing technique
   are trademarks of Kinetic Precision.
   ----------------------------------------------------------------------------
-  Revision : 0.32
-  Generated: 2026-07-22 18:07 EDT
+  Revision : 0.34
+  Generated: 2026-07-23 10:26 EDT
   ----------------------------------------------------------------------------
   Geometry : 15 weight holes @ R0.950" (Balancing Ring Rev 3), 22.5deg pitch
              arbor rolling radius a = 0.25" (1/2" shaft)
              M = mounting-setscrew position at top (0deg); reading-only, never a weight station
   Physics  : U = 4*pi^2 * I_eff / (g * T^2)   [g.in]
              I_eff = 0.5*Mdisk*R^2 + 0.5*ma*a^2 + (Mdisk+ma)*a^2
+  Rev 0.34 : Compacted the Second block: TTB Period and TTB Goal now share one line
+             (label, input, label, input). Wraps to two-per-line on phones.
+  Rev 0.33 : TTB goal period is now user-settable (25-60 s, default 25, clamps to
+             nearest limit on change/blur). Replaces the fixed TTB_PASS constant;
+             pass verdicts, hint, and the repeat-until instruction all read the goal.
+             "Pass target" wording changed to "Goal". Reset returns goal to 25.
   Rev 0.32 : FLIP CHECK step 2: added SHCS escalation paragraph (swap setscrew to
              socket-head cap screw for more mounting weight as a last-ditch effort;
              note untrued wheel may be the problem).
@@ -244,6 +250,8 @@
     .cpick .copt{padding:13px 12px}
     .deltabar input{font-size:16px}
     .row{flex-direction:column;gap:8px}   /* stack paired reversal dropdowns */
+    /* period + goal: two per line on a phone instead of four across */
+    .periodrow{grid-template-columns:auto 1fr;gap:8px 10px}
     /* larger tap targets */
     .mtoggle{width:54px;height:30px}
     .mtoggle .mknob{width:26px;height:26px;left:26px;top:2px}
@@ -302,6 +310,10 @@
   /* FLIP CHECKED! confirmation flag */
   .flipflag{display:none;align-items:center;gap:7px;background:rgba(0,158,115,.14);border:1px solid rgba(0,158,115,.45);color:#3ad0a0;border-radius:5px;padding:7px 12px;font-family:var(--font-disp);text-transform:uppercase;letter-spacing:.05em;font-size:13px;font-weight:600}
   .flipflag.show{display:inline-flex}
+  /* TTB Period + TTB Goal on one line: label, input, label, input */
+  .periodrow{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:10px;align-items:center}
+  .periodrow .pl{margin:0;white-space:nowrap}
+  .periodrow input{width:100%;min-width:0}
 </style>
 </head>
 <body>
@@ -310,7 +322,7 @@
     <div class="title">Ring<span class="thin">Calc</span><span class="tm">™</span></div>
     <div class="subrow">
       <div class="sub">B-200 Balancing Ring · TTB Method · mixed-screw first-pass solver</div>
-      <div class="revtag">RingCalc™ rev 0.32</div>
+      <div class="revtag">RingCalc™ rev 0.34</div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
       <button class="flipbtn" onclick="openFlip()">Flip Check</button>
@@ -355,9 +367,13 @@
           <div class="hint">Set the wheel rocking. At each reversal (the instant it stops and reverses), read the hole at 12 o'clock — one per side. These fix the balance axis precisely.</div>
         </div>
         <div class="field">
-          <label class="f">TTB Period <span class="unit">(seconds)</span></label>
-          <input type="number" id="period" step="0.1" min="0" placeholder="e.g. 11.0">
-          <div class="hint">Pass target: period &gt; 25 s.</div>
+          <div class="periodrow">
+            <label class="f pl" for="period">TTB Period <span class="unit">(s)</span></label>
+            <input type="number" id="period" step="0.1" min="0" placeholder="e.g. 11.0">
+            <label class="f pl" for="goalInput">TTB Goal <span class="unit">(s)</span></label>
+            <input type="number" id="goalInput" step="1" min="25" max="60" value="25" onchange="clampGoal()" onblur="clampGoal()">
+          </div>
+          <div class="hint">Goal: period &gt; <span id="goalEcho">25</span> s. Goal range 25–60 s; higher is a tighter balance.</div>
         </div>
       </div>
 
@@ -458,7 +474,24 @@
 
 <script>
 /* ===== GEOMETRY (Rev 3) ===== */
-const R_ARM=0.950, A_ARBOR=0.25, G=386.0886, TTB_PASS=25;
+const R_ARM=0.950, A_ARBOR=0.25, G=386.0886;
+const GOAL_MIN=25, GOAL_MAX=60, GOAL_DEFAULT=25;
+/* the balanced-at period, user-settable (25–60 s) */
+function ttbGoal(){
+  const el=document.getElementById('goalInput');
+  let v=el?parseFloat(el.value):GOAL_DEFAULT;
+  if(!(v>0)) v=GOAL_DEFAULT;
+  return Math.min(GOAL_MAX, Math.max(GOAL_MIN, v));
+}
+function clampGoal(){
+  const el=document.getElementById('goalInput');
+  if(!el) return;
+  let v=parseFloat(el.value);
+  if(!(v>0)) v=GOAL_DEFAULT;
+  v=Math.min(GOAL_MAX, Math.max(GOAL_MIN, Math.round(v)));
+  el.value=v;
+  const echo=document.getElementById('goalEcho'); if(echo) echo.textContent=v;
+}
 /* 15 WEIGHT stations — the solver only ever uses these. */
 const HOLES=[
   {id:'7',ang:22.5},{id:'6',ang:45},{id:'5',ang:67.5},{id:'4',ang:90},
@@ -790,8 +823,8 @@ function installedMoment(){
 function solve(){
   const inp=readInputs(); if(!inp) return;
   const {D,wm,am,a,b,light,T}=inp;
-  if(T>TTB_PASS){
-    result.innerHTML=`<div class="verdict pass">Balanced — done<small>Period ${T.toFixed(1)} s is past the 25 s threshold. Residual is below the stand's resolution.</small></div>`;
+  if(T>ttbGoal()){
+    result.innerHTML=`<div class="verdict pass">Balanced — done<small>Period ${T.toFixed(1)} s is past the ${ttbGoal()} s goal. Residual is below the stand's resolution.</small></div>`;
     drawRing();return;
   }
   const U=residualGramIn(D,wm,am,T);
@@ -858,8 +891,8 @@ function solveFineTuneAssign(target, installedAssign){
 function startFineTune(){
   const inp=readInputs(); if(!inp) return;
   const {D,wm,am,a,b,light,T}=inp;
-  if(T>TTB_PASS){
-    result.innerHTML=`<div class="verdict pass">Balanced — done<small>Period ${T.toFixed(1)} s is past the 25 s threshold. Nothing more to do.</small></div>`;
+  if(T>ttbGoal()){
+    result.innerHTML=`<div class="verdict pass">Balanced — done<small>Period ${T.toFixed(1)} s is past the ${ttbGoal()} s goal. Nothing more to do.</small></div>`;
     drawRing({slashHoles:installed.map(p=>p.hole)});return;
   }
   const U=residualGramIn(D,wm,am,T);           // remaining residual, WITH installed screws in place
@@ -960,7 +993,7 @@ function renderPrescription(sol, U, heavyHole, heavyAng, isFineTune, diff){
   // stash for the confirm step, then offer confirm
   pendingPrescription={placements:sol.placements, heavyHole, heavyAng};
   html+=`<button class="confirm" onclick="confirmInstalled()">✓ I installed these — confirm</button>`;
-  html+=`<div class="reread">After confirming, run TTB again, enter the new reading, and press <b>Keep screws and calculate fine tuning</b>. Repeat until the period clears <b>25 s</b>.</div>`;
+  html+=`<div class="reread">After confirming, run TTB again, enter the new reading, and press <b>Keep screws and calculate fine tuning</b>. Repeat until the period clears <b>${ttbGoal()} s</b>.</div>`;
   result.innerHTML=html;
 }
 
@@ -1000,6 +1033,9 @@ function resetAll(){
   document.getElementById('mlblBest').classList.add('act');
   document.getElementById('mlblFew').classList.remove('act');
   document.getElementById('deltabar').classList.toggle('dim',true);
+  // goal returns to the bottom of the range on a full reset
+  const gi=document.getElementById('goalInput'); if(gi) gi.value=GOAL_DEFAULT;
+  clampGoal();
   clearFieldFlags();
   result.innerHTML=`<div class="empty">Fill in the wheel, the reversal holes, the light-side hole, and the period — then calculate.</div>`;
   drawRing();
@@ -1049,6 +1085,7 @@ function flipFail(){
 /* boot */
 fillSelects();drawRing();renderLegend();
 document.getElementById('deltabar').classList.toggle('dim',bestBalanceMode);
+clampGoal();
 
 /* ===== iframe auto-resize: report content height to the parent page =====
    Lets an embedding page (e.g. Squarespace) size the iframe to fit exactly,
