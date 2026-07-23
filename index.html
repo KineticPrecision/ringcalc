@@ -16,14 +16,17 @@
   "RingCalc," "Time To Balance," "TTB Method," and the TTB balancing technique
   are trademarks of Kinetic Precision.
   ----------------------------------------------------------------------------
-  Revision : 0.36
-  Generated: 2026-07-23 10:49 EDT
+  Revision : 0.37
+  Generated: 2026-07-23 11:28 EDT
   ----------------------------------------------------------------------------
   Geometry : 15 weight holes @ R0.950" (Balancing Ring Rev 3), 22.5deg pitch
              arbor rolling radius a = 0.25" (1/2" shaft)
              M = mounting-setscrew position at top (0deg); reading-only, never a weight station
   Physics  : U = 4*pi^2 * I_eff / (g * T^2)   [g.in]
              I_eff = 0.5*Mdisk*R^2 + 0.5*ma*a^2 + (Mdisk+ma)*a^2
+  Rev 0.37 : Added PRINTABLE SHEET — a print-only blank bench sheet with a large
+             ring map (blank, recolored for paper), job/wheel fields, 8 TTB pass rows,
+             and the reading convention. Uses the browser print dialog (Save as PDF).
   Rev 0.36 : "Beyond the ring's reach" message now directs the user to perform a
              FLIP CHECK instead of the vague "add a heavier screw" advice, with a
              Flip Check button in the warning box that opens the explainer directly.
@@ -323,6 +326,37 @@
   .flipbtn.alertflip{margin-top:12px}
   .alertflipwrap{text-align:center}
   .fliprow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--steel-3)}
+  /* ===== printable blank bench sheet ===== */
+  .printsheet{display:none}
+  @media print{
+    /* hide the app, show only the sheet */
+    body > .wrap, .flippanel{display:none !important}
+    .printsheet{display:block !important;color:#000;background:#fff}
+    @page{size:letter portrait;margin:0.5in}
+    /* browser print headers (URL/date/page no.) live in the top margin — keep clear of them */
+    .printsheet{padding-top:0.45in}
+    html,body{background:#fff !important}
+    .ps-head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:12px}
+    .ps-title{font-family:Helvetica,Arial,sans-serif;font-size:22px;font-weight:700;letter-spacing:.02em}
+    .ps-title span{font-weight:400}
+    .ps-sub{font-family:Helvetica,Arial,sans-serif;font-size:9px;color:#444;text-align:right;line-height:1.4}
+    .ps-jobrow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+    .ps-f{border:1px solid #888;border-radius:3px;height:30px;position:relative}
+    .ps-f b{position:absolute;top:-8px;left:6px;background:#fff;padding:0 4px;font-family:Helvetica,Arial,sans-serif;font-size:7.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#333}
+    .ps-mapwrap{text-align:center;margin:6px 0 10px}
+    .ps-map{width:4.4in;max-width:100%}
+    .ps-map svg{width:100%;height:auto}
+    /* the embedded ring art is light steel for a dark UI; darken it for paper */
+    .ps-map svg image{filter:brightness(0.25) contrast(2)}
+    .ps-note{font-family:Helvetica,Arial,sans-serif;font-size:8.5px;color:#444;text-align:center;margin-bottom:12px;line-height:1.4}
+    .ps-tbl{width:100%;border-collapse:collapse;font-family:Helvetica,Arial,sans-serif;font-size:8.5px}
+    .ps-tbl th{border:1px solid #888;background:#eee;padding:5px 4px;text-transform:uppercase;letter-spacing:.04em;font-size:7.5px;text-align:left}
+    .ps-tbl td{border:1px solid #888;height:26px}
+    .ps-tbl td.pn{text-align:center;color:#999;width:26px;font-size:9px}
+    .ps-conv{border:1px solid #000;border-radius:3px;padding:8px 10px;margin-top:12px;font-family:Helvetica,Arial,sans-serif;font-size:8.5px;line-height:1.5;color:#222}
+    .ps-conv b{text-transform:uppercase;letter-spacing:.05em;font-size:8px}
+    .ps-foot{margin-top:10px;font-family:Helvetica,Arial,sans-serif;font-size:7.5px;color:#666;text-align:center}
+  }
 </style>
 </head>
 <body>
@@ -331,7 +365,7 @@
     <div class="title">Ring<span class="thin">Calc</span><span class="tm">™</span></div>
     <div class="subrow">
       <div class="sub">B-200 Balancing Ring · TTB Method · mixed-screw first-pass solver</div>
-      <div class="revtag">RingCalc™ rev 0.36</div>
+      <div class="revtag">RingCalc™ rev 0.37</div>
     </div>
   </div>
 
@@ -359,6 +393,7 @@
         <div class="fliprow">
           <button class="flipbtn" onclick="openFlip()">Flip Check</button>
           <span class="flipflag" id="flipFlag">✓ Flip Checked!</span>
+          <button class="flipbtn" onclick="openPrintSheet()" style="margin-left:auto">Printable Sheet</button>
         </div>
       </div>
 
@@ -479,6 +514,59 @@
       <div><button class="rback" onclick="closeFlip()">← Back to calculator</button></div>
     </div>
   </div>
+</div>
+
+<!-- Printable blank bench sheet (screen-hidden; rendered only on print) -->
+<div class="printsheet" id="printSheet">
+  <div class="ps-head">
+    <div class="ps-title">RingCalc™ <span>· Bench Sheet</span></div>
+    <div class="ps-sub">B-200 Balancing Ring · TTB Method<br>Kinetic Precision</div>
+  </div>
+
+  <div class="ps-jobrow">
+    <div class="ps-f"><b>Date</b></div>
+    <div class="ps-f"><b>Operator</b></div>
+    <div class="ps-f"><b>Wheel ID / spec</b></div>
+    <div class="ps-f"><b>Goal period (s)</b></div>
+  </div>
+  <div class="ps-jobrow">
+    <div class="ps-f"><b>Wheel dia (in)</b></div>
+    <div class="ps-f"><b>Wheel mass (g)</b></div>
+    <div class="ps-f"><b>Arbor+adapter+ring (g)</b></div>
+    <div class="ps-f"><b>Flip check ✓</b></div>
+  </div>
+
+  <div class="ps-mapwrap">
+    <div class="ps-map" id="psMap"></div>
+  </div>
+  <div class="ps-note">
+    M = mounting setscrew (top, 12 o'clock) — reading position only, never a weight station.
+    Mark the holes you fill. 15 weight holes at 22.5° spacing, bolt circle R0.950″.
+  </div>
+
+  <table class="ps-tbl">
+    <thead>
+      <tr>
+        <th style="width:26px">#</th>
+        <th style="width:52px">Light hole</th>
+        <th style="width:52px">Rev A</th>
+        <th style="width:52px">Rev B</th>
+        <th style="width:60px">Period T (s)</th>
+        <th>Screws installed (hole : type)</th>
+        <th style="width:62px">Period after (s)</th>
+      </tr>
+    </thead>
+    <tbody id="psRows"></tbody>
+  </table>
+
+  <div class="ps-conv">
+    <b>Reading convention</b> — Read every hole at the <b>12-o'clock (top)</b> position.
+    At rest the light side floats to the top: that hole is the light-side reading.
+    Set the wheel rocking; at each reversal (the instant it stops and reverses) read the hole at 12 o'clock — one per side.
+    Install the prescribed screws, run TTB again, and record the new period. Repeat until the period clears the goal.
+  </div>
+
+  <div class="ps-foot">"RingCalc," "Time To Balance" &amp; "TTB Method" are trademarks of Kinetic Precision · © 2026 Kinetic Precision. All Rights Reserved.</div>
 </div>
 
 <script>
@@ -1090,6 +1178,24 @@ function flipSuccess(){
 function flipFail(){
   document.getElementById('flipFailMsg').classList.add('show');
   document.getElementById('flipFailMsg').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+/* ===== printable blank bench sheet ===== */
+function openPrintSheet(){
+  // blank ring map, recolored for paper (dark lines / dark labels on white)
+  let svg = buildRingSVG({});
+  // the art image and labels use theme vars; override for print
+  svg = svg.replace('<svg ', '<svg style="--ink:#000;--ink-dim:#333;--ink-faint:#555;" ');
+  svg = svg.replace(/fill="#F5D600"/g, 'fill="#000"');          // label yellow -> black
+  svg = svg.replace(/style="fill:#F5D600;/g, 'style="fill:#000;');
+  document.getElementById('psMap').innerHTML = svg;
+  // blank pass rows
+  let rows='';
+  for(let i=1;i<=8;i++){
+    rows+=`<tr><td class="pn">${i}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+  }
+  document.getElementById('psRows').innerHTML = rows;
+  window.print();
 }
 
 /* boot */
