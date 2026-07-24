@@ -16,14 +16,16 @@
   "RingCalc," "Time To Balance," "TTB Method," and the TTB balancing technique
   are trademarks of Kinetic Precision.
   ----------------------------------------------------------------------------
-  Revision : 0.41
-  Generated: 2026-07-24 18:08 EDT
+  Revision : 0.42
+  Generated: 2026-07-24 18:47 EDT
   ----------------------------------------------------------------------------
   Geometry : 15 weight holes @ R0.950" (Balancing Ring Rev 3), 22.5deg pitch
              arbor rolling radius a = 0.25" (1/2" shaft)
              M = mounting-setscrew position at top (0deg); reading-only, never a weight station
   Physics  : U = 4*pi^2 * I_eff / (g * T^2)   [g.in]
              I_eff = 0.5*Mdisk*R^2 + 0.5*ma*a^2 + (Mdisk+ma)*a^2
+  Rev 0.42 : Added 1/4-20 x 5/16 setscrew (1.03 g, McMaster 94105A534) to the default
+             library, in mass order between the 1/4 and 3/8.
   Rev 0.41 : Added in/mm data-entry switch (top-right of first block) for wheel
              diameter only. Live-converts the entered value; physics stays in inches
              (mm normalized at the input boundary). Reset returns to inches.
@@ -398,7 +400,7 @@
     <div class="title">Ring<span class="thin">Calc</span><span class="tm">™</span></div>
     <div class="subrow">
       <div class="sub">B-200 Balancing Ring · TTB Method · mixed-screw first-pass solver</div>
-      <div class="revtag">RingCalc™ rev 0.41</div>
+      <div class="revtag">RingCalc™ rev 0.42</div>
     </div>
   </div>
 
@@ -661,6 +663,7 @@ const SCREW_COLORS=['#0072B2','#E69F00','#56B4E9','#D55E00','#F0E442','#CC79A7',
 let LIB=[
   {name:'1/4-20 × 3/16', g:0.58, on:true, seed:true, desc:'Setscrew, flat nose, steel, black oxide', mc:'94105A532'},
   {name:'1/4-20 × 1/4',  g:0.75, on:true, seed:true, desc:'Setscrew, flat nose, steel, black oxide', mc:'94105A533'},
+  {name:'1/4-20 × 5/16', g:1.03, on:true, seed:true, desc:'Setscrew, flat nose, steel, black oxide', mc:'94105A534'},
   {name:'1/4-20 × 3/8',  g:1.35, on:true, seed:true, desc:'Setscrew, flat nose, steel, black oxide', mc:'94105A535'},
   {name:'1/4-20 × 1/2',  g:1.90, on:true, seed:true, desc:'Setscrew, flat nose, steel, black oxide', mc:'94105A537'}
 ];
