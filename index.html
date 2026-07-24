@@ -16,14 +16,22 @@
   "RingCalc," "Time To Balance," "TTB Method," and the TTB balancing technique
   are trademarks of Kinetic Precision.
   ----------------------------------------------------------------------------
-  Revision : 0.37
-  Generated: 2026-07-23 11:28 EDT
+  Revision : 0.39
+  Generated: 2026-07-24 17:17 EDT
   ----------------------------------------------------------------------------
   Geometry : 15 weight holes @ R0.950" (Balancing Ring Rev 3), 22.5deg pitch
              arbor rolling radius a = 0.25" (1/2" shaft)
              M = mounting-setscrew position at top (0deg); reading-only, never a weight station
   Physics  : U = 4*pi^2 * I_eff / (g * T^2)   [g.in]
              I_eff = 0.5*Mdisk*R^2 + 0.5*ma*a^2 + (Mdisk+ma)*a^2
+  Rev 0.39 : Prescription stats: removed "Heavy dir" (shown in the ring map already);
+             Residual U and Correction now share one row with Delta centered below.
+             Removed the "seed" label from default screws (they remain non-deletable).
+  Rev 0.38 : Moved Screw Library to the left (inputs) column, above the Calculate
+             block (set screws before calculating; wider column fits descriptions).
+             Added description + McMaster fields per screw, shown inline. Replaced the
+             three test screws with four real KP defaults (1/4-20 setscrews, measured
+             masses, McMaster #s). Add-screw form gained optional McMaster/description.
   Rev 0.37 : Added PRINTABLE SHEET — a print-only blank bench sheet with a large
              ring map (blank, recolored for paper), job/wheel fields, 8 TTB pass rows,
              and the reading convention. Uses the browser print dialog (Save as PDF).
@@ -215,6 +223,8 @@
   .act-tag.rem{background:rgba(0,114,178,.18);color:#4aa8de}
 
   .stat-r{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+  .stat-delta{display:flex;justify-content:center;margin-top:9px}
+  .stat-delta .stat{width:calc(50% - 4.5px)}
   .stat{background:var(--steel-0);border:1px solid var(--steel-3);border-radius:6px;padding:9px 11px}
   .stat .k{font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint)}
   .stat .v{font-family:var(--font-mono);font-size:16px;margin-top:2px}
@@ -224,11 +234,16 @@
 
   /* screw library + legend */
   .legend{display:flex;flex-direction:column;gap:6px;margin-top:2px}
-  .leg-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:9px;align-items:center;font-family:var(--font-mono);font-size:15.5px;padding:5px 7px;border-radius:5px;border:1px solid var(--steel-3);background:var(--steel-0)}
-  .leg-row.sel{border-color:var(--amber)}
+  .leg-item{border-radius:5px;border:1px solid var(--steel-3);background:var(--steel-0);padding:5px 7px}
+  .leg-item.sel{border-color:var(--amber)}
+  .leg-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:9px;align-items:center;font-family:var(--font-mono);font-size:15.5px}
   .leg-row .sw{width:15px;height:15px;border-radius:4px;border:1px solid rgba(255,255,255,.2)}
   .leg-row .nm{color:var(--ink);cursor:pointer}
   .leg-row .g{color:var(--amber)}
+  .leg-seed{color:var(--ink-faint);font-size:12.5px}
+  .leg-sub{margin:4px 0 1px 24px;line-height:1.4}
+  .leg-mc{font-family:var(--font-mono);font-size:12px;color:var(--amber-dim);white-space:nowrap}
+  .leg-desc{font-family:var(--font-body);font-size:12.5px;color:var(--ink-dim)}
   /* availability slide switch */
   .toggle{position:relative;width:34px;height:19px;border-radius:10px;background:var(--steel-3);cursor:pointer;transition:.15s;flex:none;border:1px solid var(--steel-3)}
   .toggle.on{background:var(--amber-dim)}
@@ -270,16 +285,20 @@
     .toggle.on .knob{left:20px}
     button.go,button.finetune,button.reset,button.confirm{padding:15px;font-size:16px}
     /* screw library rows must fit the phone width — tighten gaps, let the name shrink */
-    .leg-row{padding:9px 7px;gap:6px;font-size:14px;grid-template-columns:auto minmax(0,1fr) auto auto auto}
+    .leg-item{padding:9px 7px}
+    .leg-row{gap:6px;font-size:14px;grid-template-columns:auto minmax(0,1fr) auto auto auto}
     .leg-row .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
     .leg-row .g{font-size:13px;white-space:nowrap}
+    .leg-sub{margin-left:0;margin-top:5px}
+    .leg-mc,.leg-desc{white-space:normal}
     .mini{min-width:34px;min-height:34px}
     .title{font-size:30px}
     .colhead{font-size:14px}
   }
   /* very narrow phones (<=360px): shrink the fixed elements so rows never overflow */
   @media(max-width:360px){
-    .leg-row{gap:5px;padding:8px 6px}
+    .leg-item{padding:8px 6px}
+    .leg-row{gap:5px}
     .leg-row .g{font-size:12px}
     .toggle{width:38px;height:22px}
     .toggle .knob{width:18px;height:18px}
@@ -365,7 +384,7 @@
     <div class="title">Ring<span class="thin">Calc</span><span class="tm">™</span></div>
     <div class="subrow">
       <div class="sub">B-200 Balancing Ring · TTB Method · mixed-screw first-pass solver</div>
-      <div class="revtag">RingCalc™ rev 0.37</div>
+      <div class="revtag">RingCalc™ rev 0.39</div>
     </div>
   </div>
 
@@ -422,6 +441,24 @@
       </div>
 
       <div class="panel">
+        <div class="lbl">Screw library</div>
+        <div id="legend" class="legend"></div>
+        <div class="selnote">The optimizer mixes any screws in the library. Click a name to see it highlighted. Colors are chosen to be distinguishable with red-green color vision. Set your screw selection before calculating.</div>
+        <details>
+          <summary>Add / remove screws</summary>
+          <div style="display:grid;grid-template-columns:1fr 64px auto;gap:6px;margin-top:10px">
+            <input id="nn" placeholder="name" style="font-family:var(--font-body);font-size:15px;padding:6px 8px;background:var(--steel-0);border:1px solid var(--steel-3);color:var(--ink);border-radius:4px">
+            <input id="ng" type="number" step="0.01" placeholder="g" style="font-size:15px;padding:6px 8px;background:var(--steel-0);border:1px solid var(--steel-3);color:var(--ink);border-radius:4px;font-family:var(--font-mono)">
+            <button class="mini" onclick="addScrew()">Add</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+            <input id="nmc" placeholder="McMaster # (optional)" style="font-family:var(--font-mono);font-size:13px;padding:6px 8px;background:var(--steel-0);border:1px solid var(--steel-3);color:var(--ink);border-radius:4px">
+            <input id="ndesc" placeholder="description (optional)" style="font-family:var(--font-body);font-size:13px;padding:6px 8px;background:var(--steel-0);border:1px solid var(--steel-3);color:var(--ink);border-radius:4px">
+          </div>
+        </details>
+      </div>
+
+      <div class="panel">
         <div class="lbl">Third: Calculate screw locations</div>
         <div class="modebar">
           <span class="mlabel act" id="mlblBest">Best balance</span>
@@ -454,19 +491,6 @@
       <div class="panel">
         <div class="lbl">Prescription</div>
         <div id="result"><div class="empty">Fill in the wheel, the reversal holes, the light-side hole, and the period — then calculate.</div></div>
-      </div>
-      <div class="panel">
-        <div class="lbl">Screw library</div>
-        <div id="legend" class="legend"></div>
-        <div class="selnote">The optimizer mixes any screws in the library. Click a name to see it highlighted. Colors are chosen to be distinguishable with red-green color vision.</div>
-        <details>
-          <summary>Add / remove screws</summary>
-          <div style="display:grid;grid-template-columns:1fr 64px auto;gap:6px;margin-top:10px">
-            <input id="nn" placeholder="name" style="font-family:var(--font-body);font-size:15px;padding:6px 8px;background:var(--steel-0);border:1px solid var(--steel-3);color:var(--ink);border-radius:4px">
-            <input id="ng" type="number" step="0.01" placeholder="g" style="font-size:15px;padding:6px 8px;background:var(--steel-0);border:1px solid var(--steel-3);color:var(--ink);border-radius:4px;font-family:var(--font-mono)">
-            <button class="mini" onclick="addScrew()">Add</button>
-          </div>
-        </details>
       </div>
     </div>
   </div>
@@ -610,12 +634,14 @@ const HIDX_MAP=Object.fromEntries(HOLES.map((h,i)=>[h.id,i]));
    Ordered to keep adjacent picks distinct for red-green CVD. */
 const SCREW_COLORS=['#0072B2','#E69F00','#56B4E9','#D55E00','#F0E442','#CC79A7','#009E73','#999999'];
 
-/* Screw library — seeded with three for testing mixed solving.
-   'on' = available for the solution (toggleable). */
+/* Screw library — Kinetic Precision default set. Each screw: short name, mass (g),
+   description, McMaster part number, and 'on' (available for the solution, toggleable).
+   'seed' just marks a default (shown as "seed", not deletable). */
 let LIB=[
-  {name:'TestScrew 1', g:1.50, on:true, seed:true},
-  {name:'Heavy 3.0g',  g:3.00, on:true},
-  {name:'Light 0.8g',  g:0.80, on:true}
+  {name:'1/4-20 × 3/16', g:0.58, on:true, seed:true, desc:'Setscrew, flat nose, steel, black oxide', mc:'94105A532'},
+  {name:'1/4-20 × 1/4',  g:0.75, on:true, seed:true, desc:'Setscrew, flat nose, steel, black oxide', mc:'94105A533'},
+  {name:'1/4-20 × 3/8',  g:1.35, on:true, seed:true, desc:'Setscrew, flat nose, steel, black oxide', mc:'94105A535'},
+  {name:'1/4-20 × 1/2',  g:1.90, on:true, seed:true, desc:'Setscrew, flat nose, steel, black oxide', mc:'94105A537'}
 ];
 let libSel=0;
 /* mode: true = best balance (default, accuracy dominates), false = fewest screws (larger allowed miss) */
@@ -857,18 +883,35 @@ function buildRingSVG(hi){
   o+=`</svg>`;return o;
 }
 function renderLegend(){
-  legend.innerHTML=LIB.map((s,i)=>
-    `<div class="leg-row ${i===libSel?'sel':''}">`+
-    `<span class="sw" style="background:${screwColor(i)}"></span>`+
-    `<span class="nm" onclick="libSel=${i};renderLegend()">${s.name}</span>`+
-    `<span class="g">${s.g.toFixed(2)} g</span>`+
-    `<span class="toggle ${s.on?'on':''}" role="switch" aria-checked="${s.on}" title="${s.on?'Available — click to mark out of stock':'Out of stock — click to make available'}" onclick="toggleScrew(${i})"><span class="knob"></span></span>`+
-    (s.seed?'<span style="color:var(--ink-faint);font-size:12.5px">seed</span>':
-      `<button class="mini" onclick="delScrew(${i})">×</button>`)+
-    `</div>`).join('');
+  legend.innerHTML=LIB.map((s,i)=>{
+    const descBits=[];
+    if(s.mc) descBits.push(`<span class="leg-mc">McMaster ${s.mc}</span>`);
+    if(s.desc) descBits.push(`<span class="leg-desc">${s.desc}</span>`);
+    const sub = descBits.length ? `<div class="leg-sub">${descBits.join(' · ')}</div>` : '';
+    return `<div class="leg-item ${i===libSel?'sel':''}">`+
+      `<div class="leg-row">`+
+        `<span class="sw" style="background:${screwColor(i)}"></span>`+
+        `<span class="nm" onclick="libSel=${i};renderLegend()">${s.name}</span>`+
+        `<span class="g">${s.g.toFixed(2)} g</span>`+
+        `<span class="toggle ${s.on?'on':''}" role="switch" aria-checked="${s.on}" title="${s.on?'Available — click to mark out of stock':'Out of stock — click to make available'}" onclick="toggleScrew(${i})"><span class="knob"></span></span>`+
+        (s.seed?'<span class="leg-seed"></span>':
+          `<button class="mini" onclick="delScrew(${i})">×</button>`)+
+      `</div>`+
+      sub+
+    `</div>`;
+  }).join('');
 }
 function toggleScrew(i){LIB[i].on=!LIB[i].on;renderLegend();}
-function addScrew(){const n=nn.value.trim(),g=parseFloat(ng.value);if(!n||!(g>0))return;LIB.push({name:n,g,on:true});libSel=LIB.length-1;nn.value='';ng.value='';renderLegend();}
+function addScrew(){
+  const n=nn.value.trim(), g=parseFloat(ng.value);
+  if(!n||!(g>0))return;
+  const mc=(document.getElementById('nmc').value||'').trim();
+  const desc=(document.getElementById('ndesc').value||'').trim();
+  LIB.push({name:n, g, on:true, mc:mc||undefined, desc:desc||undefined});
+  libSel=LIB.length-1;
+  nn.value='';ng.value='';document.getElementById('nmc').value='';document.getElementById('ndesc').value='';
+  renderLegend();
+}
 function delScrew(i){LIB.splice(i,1);if(libSel>=LIB.length)libSel=0;renderLegend();}
 
 function toggleMode(){
@@ -905,7 +948,7 @@ function readInputs(){
     result.innerHTML=`<div class="verdict alert">Missing input<small>Fill the highlighted field${missing.length>1?'s':''}: ${list}.</small></div>`;
     drawRing();return null;
   }
-  if(!LIB.length){result.innerHTML=`<div class="verdict alert">No screws in library<small>Add at least one screw in the Screw library (right).</small></div>`;drawRing();return null;}
+  if(!LIB.length){result.innerHTML=`<div class="verdict alert">No screws in library<small>Add at least one screw in the Screw library.</small></div>`;drawRing();return null;}
   return {D,wm,am,a,b,light,T};
 }
 
@@ -932,7 +975,7 @@ function solve(){
   const target=[U*Math.sin(cr), U*Math.cos(cr)];
   const sol=solveMixed(target, corrAng);
   if(sol.none){
-    result.innerHTML=`<div class="verdict warn">No screws available<small>Every screw in the library is switched off. Turn at least one on (in the Screw library, right) so the solver has something to place.</small></div>`;
+    result.innerHTML=`<div class="verdict warn">No screws available<small>Every screw in the library is switched off. Turn at least one on (in the Screw library) so the solver has something to place.</small></div>`;
     drawRing({heavy:heavyHole, heavyAng});return;
   }
   renderPrescription(sol, U, heavyHole, heavyAng, /*isFineTune=*/false, /*diff=*/null);
@@ -1065,11 +1108,11 @@ function renderPrescription(sol, U, heavyHole, heavyAng, isFineTune, diff){
     }
   }
 
-  const heavyStat=`<div class="stat"><div class="k">Heavy dir</div><div class="v" style="color:var(--heavy)">~${heavyHole}</div></div>`;
   const statsBlock=`<div class="stat-r">
       <div class="stat"><div class="k">Residual U</div><div class="v" style="color:var(--amber)">${U.toFixed(2)}<span class="u"> g·in</span></div></div>
-      ${heavyStat}
       <div class="stat"><div class="k">Correction</div><div class="v" style="color:var(--place)">${achMag.toFixed(2)}<span class="u"> g·in</span></div></div>
+    </div>
+    <div class="stat-delta">
       <div class="stat"><div class="k">Delta</div><div class="v">${sol.dist.toFixed(2)}<span class="u"> g·in</span></div></div>
     </div>`;
 
