@@ -16,14 +16,16 @@
   "RingCalc," "Time To Balance," "TTB Method," and the TTB balancing technique
   are trademarks of Kinetic Precision.
   ----------------------------------------------------------------------------
-  Revision : 0.42
-  Generated: 2026-07-24 18:47 EDT
+  Revision : 0.43
+  Generated: 2026-07-24 18:54 EDT
   ----------------------------------------------------------------------------
   Geometry : 15 weight holes @ R0.950" (Balancing Ring Rev 3), 22.5deg pitch
              arbor rolling radius a = 0.25" (1/2" shaft)
              M = mounting-setscrew position at top (0deg); reading-only, never a weight station
   Physics  : U = 4*pi^2 * I_eff / (g * T^2)   [g.in]
              I_eff = 0.5*Mdisk*R^2 + 0.5*ma*a^2 + (Mdisk+ma)*a^2
+  Rev 0.43 : Added a "Submit Feedback" button in the footer, linking to
+             kineticprecision.com/contact (opens in a new tab).
   Rev 0.42 : Added 1/4-20 x 5/16 setscrew (1.03 g, McMaster 94105A534) to the default
              library, in mass order between the 1/4 and 3/8.
   Rev 0.41 : Added in/mm data-entry switch (top-right of first block) for wheel
@@ -392,6 +394,8 @@
   .uswlabel{font-family:var(--font-disp);text-transform:uppercase;letter-spacing:.05em;font-size:11px;color:var(--ink-faint)}
   .usopt{font-family:var(--font-mono);font-size:13px;color:var(--ink-dim);border:1px solid var(--steel-3);border-radius:4px;padding:3px 9px;cursor:pointer;user-select:none}
   .usopt.act{color:#0d0d0d;background:var(--amber);border-color:var(--amber)}
+  .feedbackbtn{display:inline-block;font-family:var(--font-disp);text-transform:uppercase;letter-spacing:.06em;font-size:13px;font-weight:600;color:var(--amber);background:transparent;border:1px solid var(--amber-dim);border-radius:5px;padding:8px 16px;cursor:pointer;text-decoration:none}
+  .feedbackbtn:hover{background:rgba(240,168,48,.1)}
 </style>
 </head>
 <body>
@@ -400,7 +404,7 @@
     <div class="title">Ring<span class="thin">Calc</span><span class="tm">™</span></div>
     <div class="subrow">
       <div class="sub">B-200 Balancing Ring · TTB Method · mixed-screw first-pass solver</div>
-      <div class="revtag">RingCalc™ rev 0.42</div>
+      <div class="revtag">RingCalc™ rev 0.43</div>
     </div>
   </div>
 
@@ -519,8 +523,11 @@
   </div>
 
   <div class="foot">
-    "RingCalc," "Time To Balance" &amp; "TTB Method" are trademarks of Kinetic Precision<br>
-    © 2026 Kinetic Precision. All Rights Reserved.
+    <a class="feedbackbtn" href="https://www.kineticprecision.com/contact" target="_blank" rel="noopener">Submit Feedback</a>
+    <div style="margin-top:12px">
+      "RingCalc," "Time To Balance" &amp; "TTB Method" are trademarks of Kinetic Precision<br>
+      © 2026 Kinetic Precision. All Rights Reserved.
+    </div>
   </div>
 </div>
 
