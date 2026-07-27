@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ============================================================================
-  RingCalc™ — B-200 Balancing Ring Calculator
+  RingCalc™ Version 1 — B-200 Balancing Ring Calculator
   Kinetic Precision · TTB Method · mixed-screw first-pass solver
   ----------------------------------------------------------------------------
   Copyright (c) 2026 Kinetic Precision. All Rights Reserved.
@@ -16,14 +16,17 @@
   "RingCalc," "Time To Balance," "TTB Method," and the TTB balancing technique
   are trademarks of Kinetic Precision.
   ----------------------------------------------------------------------------
-  Revision : 0.43
-  Generated: 2026-07-24 18:54 EDT
+  Revision : 0.44
+  Generated: 2026-07-27 10:10 EDT
   ----------------------------------------------------------------------------
   Geometry : 15 weight holes @ R0.950" (Balancing Ring Rev 3), 22.5deg pitch
              arbor rolling radius a = 0.25" (1/2" shaft)
              M = mounting-setscrew position at top (0deg); reading-only, never a weight station
   Physics  : U = 4*pi^2 * I_eff / (g * T^2)   [g.in]
              I_eff = 0.5*Mdisk*R^2 + 0.5*ma*a^2 + (Mdisk+ma)*a^2
+  Rev 0.44 : Labeled this build "Version 1" (public/released, single-ring B-200) in
+             the header title, subrow rev tag, header comment, and browser title.
+             Version 2 (multi-ring, closed development) is a separate codebase.
   Rev 0.43 : Added a "Submit Feedback" button in the footer, linking to
              kineticprecision.com/contact (opens in a new tab).
   Rev 0.42 : Added 1/4-20 x 5/16 setscrew (1.03 g, McMaster 94105A534) to the default
@@ -133,7 +136,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RingCalc™ — B-200 Balancing Ring Calculator</title>
+<title>RingCalc™ Version 1 — B-200 Balancing Ring Calculator</title>
 <style>
   :root{
     --steel-0:#0e1114; --steel-1:#171b20; --steel-2:#20262d; --steel-3:#2c353e;
@@ -152,6 +155,7 @@
   .head{border-bottom:1px solid var(--steel-3);padding-bottom:12px;margin-bottom:18px}
   .title{font-family:var(--font-disp);font-weight:600;letter-spacing:.02em;font-size:38px;line-height:1;text-transform:uppercase}
   .title .tm{font-size:0.4em;vertical-align:super;font-weight:500;letter-spacing:0;margin-left:2px}
+  .title .verbadge{font-family:var(--font-disp);font-size:0.34em;vertical-align:middle;font-weight:400;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);margin-left:10px;border:1px solid var(--steel-3);border-radius:4px;padding:2px 7px}
   .title .thin{color:var(--amber);font-weight:500}
   .subrow{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-top:6px}
   .sub{color:var(--ink-dim);font-size:15px;letter-spacing:.06em;text-transform:uppercase}
@@ -401,10 +405,10 @@
 <body>
 <div class="wrap">
   <div class="head">
-    <div class="title">Ring<span class="thin">Calc</span><span class="tm">™</span></div>
+    <div class="title">Ring<span class="thin">Calc</span><span class="tm">™</span><span class="verbadge">Version 1</span></div>
     <div class="subrow">
       <div class="sub">B-200 Balancing Ring · TTB Method · mixed-screw first-pass solver</div>
-      <div class="revtag">RingCalc™ rev 0.43</div>
+      <div class="revtag">RingCalc™ Version 1 · rev 0.44</div>
     </div>
   </div>
 
